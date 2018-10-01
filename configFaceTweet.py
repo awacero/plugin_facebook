@@ -1,0 +1,9 @@
+createpath  =   "/home/seiscomp/plugins_python/"
+dbname      =   "%s/post.db" %(createpath)
+dbtable     =   "postsFacebook"
+eqevents_path='/home/seiscomp/eqevents/'
+token_file  =   "%s/token.json" %(createpath)
+log_dir     =   "%s/" %(createpath)
+local_zone  = 'America/Guayaquil'
+LIMIT_HOURS = 2
+DATE_FORMAT_EQ = '%Y/%m/%d %H:%M:%S'
