@@ -1,3 +1,4 @@
+
 import sys,os
 HOME=os.getenv("HOME")
 sys.path.append("%s/plugins_python/facebook/" %HOME)
@@ -15,7 +16,8 @@ import json
 import requests
 from StringIO import StringIO
 
-
+import subprocess
+                    
 class Plugin(plugin.PluginBase):
     VERSION="0.2"
     
@@ -43,17 +45,17 @@ class Plugin(plugin.PluginBase):
             return False           
         
         """
-        Check token file for FB 
+        Check token file for FB and Bitly
         """
         token=self.read_config_file(self.fb_token)
         if token==False:
             logging.info("Error while reading token file: %s" % (cfg.fb_token_file))
             return False
         else:            
-
+            self.token_bitly=token['BITLY']
             self.token_facebook=token[self.fb_acc]
-            logging.info("Reading token ok: %s" %(self.token_facebook))
-        
+            #logging.info("Reading token ok: %s" %(self.token_facebook))
+            logging.info("Reading token ok")
         """
         Create event dictionary from ctx
         """      
@@ -129,7 +131,7 @@ class Plugin(plugin.PluginBase):
             
 
     def create_post_message(self,evD):
-        logging.info("#SISMO ID: %s %s %s TL Magnitud:%s Prof %s km, %s Latitud:%s Longitud:%s Sintio este sismo? Reportelo! en %s\
+        logging.info("#SISMO ID: %s %s %s TL Magnitud:%s Prof %s km, %s Latitud:%s Longitud:%s Sintio este sismo?Cuentenos en donde (debil,fuerte,muy fuerte) Reportelo! en %s\
         " % (evD['evID'], evD['modo'], evD['date'], evD['magV'], evD['dept'], evD['dist'], evD['lati'], evD['long'], evD['url']))
         post_text = "#SISMO ID: %s %s %s TL Magnitud:%s Prof %s km, %s Latitud:%s Longitud:%s Sintio este sismo? Reportelo! en %s\
         " % (evD['evID'], evD['modo'], evD['date'], evD['magV'], evD['dept'], evD['dist'], evD['lati'], evD['long'], evD['url'])
@@ -150,6 +152,12 @@ class Plugin(plugin.PluginBase):
                 post_DB = {'eventID':'%s' %evD['evID'], 'faceID':'%s' %str(post_id['post_id'])}
                 if sqliteFaceDB.savePost(post_DB) == 0:
                     logging.info("Post inserted in DB")
+                    logging.info("Llamar a hide_facebook_messages")
+                    script_sh="/home/seiscomp/plugins_python/ml_text/run_hide_facebook_messages.sh"
+                    event_id = evD['evID']
+                    post_id = str(post_id['post_id'])
+                    FNULL=open(os.devnull,'w')
+                    p=subprocess.Popen(["%s" %script_sh,"%s"%event_id, "%s" %post_id],stdout=FNULL,stderr=subprocess.STDOUT)
                 else:
                     logging.info("Failed to insert post in DB. Something bad will happen!")
                 return True
@@ -167,7 +175,7 @@ class Plugin(plugin.PluginBase):
         d={}
         o=ctx['origin']
         d['evID']=ctx['ID']
-        d['modo']=str(o.evaluationMode)
+        d['modo']=self.status(str(o.evaluationMode))
         dtime=o.time.value
         dtime=datetime.strptime(dtime[:19],"%Y-%m-%dT%H:%M:%S") -timedelta(hours=5)
         d['date']=dtime
@@ -176,7 +184,8 @@ class Plugin(plugin.PluginBase):
         d['dist']=distancia.closest_distance(o.latitude.value,o.longitude.value)
         d['lati']="%.2f" %o.latitude.value
         d['long']="%.2f" %o.longitude.value
-        d['url']="URL OF WEB PAGE"       
+        d['url']=distancia.create_google_url(d['date'],d['evID'])
+        d['url']=str(distancia.short_url(d['url']))       
         d['path']="%s/%s-map.png" %(path,d['evID'])
         return d
 
@@ -204,6 +213,16 @@ class Plugin(plugin.PluginBase):
             return True
         else:
             return False
+
+    def status(self,stat):
+        if stat == 'automatic':
+            stat = 'Preliminar'
+        elif stat == 'manual':
+            stat = 'Revisado'
+        else:
+            stat = '.'
+        return stat
+
 
     def check_post_existence(self,evID):
         select = "*"
@@ -250,3 +269,5 @@ class Plugin(plugin.PluginBase):
         else:
             logging.info("Event %s not found in FB post.db. Nothing to do" %(evID))
             return False
+
+
