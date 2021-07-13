@@ -1,3 +1,10 @@
+'''
+Created on May 26, 2016
+
+@author: wacero
+'''
+
+
 import sqlite3
 import os
 from eqelib import configFaceTweet
@@ -106,3 +113,6 @@ def deletePost(evID):
         return True
     except sqlite3.Error, e:
         return str(e)
+    
+
+

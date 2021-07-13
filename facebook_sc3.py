@@ -133,7 +133,7 @@ class Plugin(plugin.PluginBase):
     def create_post_message(self,evD):
         logging.info("#SISMO ID: %s %s %s TL Magnitud:%s Prof %s km, %s Latitud:%s Longitud:%s Sintio este sismo?Cuentenos en donde (debil,fuerte,muy fuerte) Reportelo! en %s\
         " % (evD['evID'], evD['modo'], evD['date'], evD['magV'], evD['dept'], evD['dist'], evD['lati'], evD['long'], evD['url']))
-        post_text = "#SISMO ID: %s %s %s TL Magnitud:%s Prof %s km, %s Latitud:%s Longitud:%s Sintio este sismo? Reportelo! en %s\
+        post_text =  "#SISMO ID: %s %s %s TL Magnitud:%s Prof %s km, %s Latitud:%s Longitud:%s Sintio este sismo?Cuentenos en donde (debil,fuerte,muy fuerte) Reportelo! en %s\
         " % (evD['evID'], evD['modo'], evD['date'], evD['magV'], evD['dept'], evD['dist'], evD['lati'], evD['long'], evD['url'])
         
         return post_text, evD['path']
