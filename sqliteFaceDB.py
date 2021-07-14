@@ -37,7 +37,7 @@ def initDatabase():
         con = connectDatabase()
         cur = con.cursor()
         sql = """CREATE TABLE %s (
-        eventID TEXT PRIMARY KEY, faceID INTEGER NULL)""" % configFaceTweet.fb_dbtable
+        eventID TEXT PRIMARY KEY, faceID INTEGER NULL, modo TEXT NULL)""" % configFaceTweet.fb_dbtable
         logging.debug("Creating table %s" % configFaceTweet.fb_dbtable)
         cur.execute(sql)
         closeDatabase(con)
@@ -51,8 +51,8 @@ def savePost(postDict):
     postDict["table"] = configFaceTweet.fb_dbtable
     con = connectDatabase()
     cur = con.cursor()
-    sql = """INSERT INTO %s (eventID, faceID ) 
-        VALUES (:eventID,  :faceID)""" % configFaceTweet.fb_dbtable
+    sql = """INSERT INTO %s (eventID, faceID, modo ) 
+        VALUES (:eventID,  :faceID, :modo)""" % configFaceTweet.fb_dbtable
 
     try:
         cur.execute(sql, postDict)
