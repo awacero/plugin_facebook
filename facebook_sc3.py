@@ -24,11 +24,12 @@ class Plugin(plugin.PluginBase):
     def __init__(self, app,generator,env,db,cursor):
         
         logging.info("Calling init()")
-        self.fb_token=cfg.fb_token_file
-        self.fb_acc=cfg.face_fan_page
-        self.hour_limit=cfg.LIMIT_HOURS
-        self.log_file=cfg.fb_log_file
-
+        self.plugins_path = cfg.plugins_path
+        self.fb_token = cfg.fb_token_file
+        self.fb_acc = cfg.face_fan_page
+        self.hour_limit = cfg.LIMIT_HOURS
+        self.log_file = cfg.fb_log_file
+    
         
     def processEvent(self,ctx,path):
         """
@@ -75,7 +76,7 @@ class Plugin(plugin.PluginBase):
         logging.info("###CHECK TO DB") 
         post_row=self.check_post_existence(event_dict['evID'])
         for r in post_row:
-            logging.info("##CHECK ROW: %s" %r)
+            logging.info("##CHECK ROW: %s vs event_dict: %s" % (r , event_dict))
             if r['eventID']==event_dict['evID'] and r['modo']==event_dict['modo']:
                 logging.info("Event already published")
                 return True
@@ -192,7 +193,7 @@ class Plugin(plugin.PluginBase):
         
         post = self.create_post_message(evD)
         try:
-            
+            logging.info("Event received: %s" %evD) 
             api_facebook = facebook.GraphAPI(self.token_facebook['token'])
             post_id = api_facebook.put_photo(image=open(post[1]), message=post[0])
             if post_id:
@@ -202,7 +203,7 @@ class Plugin(plugin.PluginBase):
                 if sqliteFaceDB.savePost(post_DB) == 0:
                     logging.info("Post inserted in DB")
                     logging.info("Llamar a hide_facebook_messages")
-                    script_sh="/home/seiscomp/plugins_python/ml_text/run_hide_facebook_messages.sh"
+                    script_sh="/%s/ml_text/run_hide_facebook_messages.sh" %self.plugins_path
                     event_id = evD['evID']
                     post_id = str(post_id['post_id'])
                     FNULL=open(os.devnull,'w')
