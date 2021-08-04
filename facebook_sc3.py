@@ -1,7 +1,7 @@
 
 import sys,os
 HOME=os.getenv("HOME")
-sys.path.append("%s/plugins_python/facebook/" %HOME)
+sys.path.append("%s/plugins_python/plugin_facebook/" %HOME)
 
 from datetime import datetime, timedelta
 import seiscomp3.Logging as logging
@@ -10,7 +10,7 @@ import eqelib.settings as settings
 from eqelib import configFaceTweet as cfg
 from eqelib import distancia
 
-import sqliteFaceDB
+import facebook_plugin_sqlite_connection as sqliteFaceDB
 import facebook 
 import json
 import requests
@@ -59,21 +59,55 @@ class Plugin(plugin.PluginBase):
         """
         Create event dictionary from ctx
         """      
-        d=self.ctx2dict(ctx,path)
-        logging.info("##Created dict: %s" %d)
+        event_dict=self.ctx2dict(ctx,path)
+        logging.info("##Created dict: %s" %event_dict)
 
         """
         Check event antiquity 
         """
-        if self.check_antiquity(d['date']) == False:
-            logging.info("Event %s too old to publish" %d['evID'])
+        if self.check_antiquity(event_dict['date']) == False:
+            logging.info("Event %s too old to publish" %event_dict['evID'])
 	    return True
         
         """
         Check in postDB if the event has been published already
         """
+        logging.info("###CHECK TO DB") 
+        post_row=self.check_post_existence(event_dict['evID'])
+        for r in post_row:
+            logging.info("##CHECK ROW: %s" %r)
+            if r['eventID']==event_dict['evID'] and r['modo']==event_dict['modo']:
+                logging.info("Event already published")
+                return True
+            else:
+                logging.info("Event not found. Continue to publish")
+            
+        """     Post to Facebook        """
+        try:
+            post = self.create_post_message(event_dict)        
+        except Exception as e:
+            logging.info("Error while creating post for %s. Error was: %s" %(event_dict['evID'], str(e)))
+            return False
+
+        post_id = self.post_event(post,event_dict)
+        if post_id==False:
+            logging.info("Error posting to Facebook")
+            return False
+        else:
+            ##INSERTAR EN BD
+            
+            post_DB = {'eventID':'%s' %event_dict['evID'], 'faceID':'%s' %str(post_id['post_id']),'modo':'%s' %event_dict['modo'] }
+            logging.info("Insert post info into DB: %s" %post_DB ) 
+            if sqliteFaceDB.savePost(post_DB) == 0:
+                logging.info("Post inserted in DB")
+            else:
+                logging.info("Failed to insert post in DB. Something bad will happen!")
+            
+            return True
+        """
         post = self.check_post_existence(d['evID'])
         if not post:
+            ##El evento aun no se ha publicado, modificar upload_post para que incluya el modo del evento
             logging.info("No event: %s in postdatabase. Calling upload_event()" % (d['evID']))
             if self.upload_post(d)==True:
                 logging.info("Event %s uploaded. Exit" %(d['evID']))
@@ -101,6 +135,21 @@ class Plugin(plugin.PluginBase):
             else:
                 logging.info("Failed while re-sending post: %s" %(d['evID']))
                 return False
+        """
+
+    def post_event(self,post,event_dict):
+        """     Post to Facebook        """
+        try:
+        
+            api_facebook = facebook.GraphAPI(self.token_facebook['token'])
+            post_id = api_facebook.put_photo(image=open(post[1]), message=post[0])
+            return post_id
+
+        except Exception as e:
+            logging.info("Error while uploading post for %s. Error was: %s" %(event_dict['evID'], str(e)))
+            return False
+    
+
 
 
     def resend_post(self,msg_post, post_id):

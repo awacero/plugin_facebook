@@ -37,7 +37,7 @@ def initDatabase():
         con = connectDatabase()
         cur = con.cursor()
         sql = """CREATE TABLE %s (
-        eventID TEXT PRIMARY KEY, faceID INTEGER NULL, modo TEXT NULL)""" % configFaceTweet.fb_dbtable
+        eventID TEXT , faceID TEXT PRIMARY KEY, modo TEXT NULL)""" % configFaceTweet.fb_dbtable
         logging.debug("Creating table %s" % configFaceTweet.fb_dbtable)
         cur.execute(sql)
         closeDatabase(con)
