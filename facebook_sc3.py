@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 import sys,os
 HOME=os.getenv("HOME")
@@ -74,15 +75,16 @@ class Plugin(plugin.PluginBase):
         Check in postDB if the event has been published already
         """
         logging.info("###CHECK TO DB") 
-        post_row=self.check_post_existence(event_dict['evID'])
-        for r in post_row:
-            logging.info("##CHECK ROW: %s vs event_dict: %s" % (r , event_dict))
-            if r['eventID']==event_dict['evID'] and r['modo']==event_dict['modo']:
-                logging.info("Event already published")
-                return True
-            else:
-                logging.info("Event not found. Continue to publish")
-            
+        post_row=self.check_post_existence(event_dict['evID'],event_dict['modo'])
+        
+        if len(post_row)==0:
+            logging.info("Event not found. Continue to publish")
+
+        elif len(post_row)==1:
+            logging.info("Event already published. Exit")
+            return True
+        
+    
         """     Post to Facebook        """
         try:
             post = self.create_post_message(event_dict)        
@@ -105,39 +107,7 @@ class Plugin(plugin.PluginBase):
                 logging.info("Failed to insert post in DB. Something bad will happen!")
             
             return True
-        """
-        post = self.check_post_existence(d['evID'])
-        if not post:
-            ##El evento aun no se ha publicado, modificar upload_post para que incluya el modo del evento
-            logging.info("No event: %s in postdatabase. Calling upload_event()" % (d['evID']))
-            if self.upload_post(d)==True:
-                logging.info("Event %s uploaded. Exit" %(d['evID']))
-                return True
-            else:
-                logging.info("Failed while upload event: %s" %(d['evID']))
-                return False
-        
-        elif self.check_facebook_post(post[0]['faceID']) == False:
-            logging.info("No event: %s found in Facebook. Upload anyway" % (d['evID']))
-            if self.upload_post(d)==True:
-                logging.info("Event %s uploaded. Exit" %(d['evID']))
-                return True
-            else:
-                logging.info("Failed while upload event: %s" %(d['evID']))
-                return False
-
-        else:
-            logging.info("Event: %s exist. Update" % (d['evID']))
-            updated_post = self.create_post_message(d)
-            
-            if self.resend_post(updated_post[0], post[0]['faceID'])==True:
-                logging.info("resend_post() OK. Exit")
-                return True
-            else:
-                logging.info("Failed while re-sending post: %s" %(d['evID']))
-                return False
-        """
-
+    
     def post_event(self,post,event_dict):
         """     Post to Facebook        """
         try:
@@ -150,6 +120,7 @@ class Plugin(plugin.PluginBase):
             logging.info("Error while uploading post for %s. Error was: %s" %(event_dict['evID'], str(e)))
             return False
     
+
 
 
 
@@ -181,11 +152,10 @@ class Plugin(plugin.PluginBase):
             
 
     def create_post_message(self,evD):
-        logging.info("#SISMO ID: %s %s %s TL Magnitud:%s Prof %s km, %s Latitud:%s Longitud:%s Sintio este sismo?Cuentenos en donde (debil,fuerte,muy fuerte) Reportelo! en %s\
-        " % (evD['evID'], evD['modo'], evD['date'], evD['magV'], evD['dept'], evD['dist'], evD['lati'], evD['long'], evD['url']))
-        post_text =  "#SISMO ID: %s %s %s TL Magnitud:%s Prof %s km, %s Latitud:%s Longitud:%s Sintio este sismo?Cuentenos en donde (debil,fuerte,muy fuerte) Reportelo! en %s\
+	
+        post_text =  "#SISMO ID: %s %s %s TL Magnitud:%s Prof %s km, %s Latitud:%s Longitud:%s Sintió este sismo? Cuéntenos en dónde (débil,fuerte,muy fuerte) Repórtelo! en %s\
         " % (evD['evID'], evD['modo'], evD['date'], evD['magV'], evD['dept'], evD['dist'], evD['lati'], evD['long'], evD['url'])
-        
+        logging.info(post_text)
         return post_text, evD['path']
 
     
@@ -274,9 +244,9 @@ class Plugin(plugin.PluginBase):
         return stat
 
 
-    def check_post_existence(self,evID):
+    def check_post_existence(self,evID,modo):
         select = "*"
-        where = "eventID='%s'" % evID
+        where = "eventID='%s' AND modo='%s' " % (evID,modo)
         return sqliteFaceDB.getPost(select, where)
 
     
@@ -295,7 +265,7 @@ class Plugin(plugin.PluginBase):
         else:
             self.token_facebook = token[self.fb_acc]
             
-        post=self.check_post_existence(evID)
+        post=self.check_post_existence(evID,modo)
         if post:
             logging.info("Event %s found in FB post.db. Delete" %(evID))
             try:
