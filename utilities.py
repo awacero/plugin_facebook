@@ -27,16 +27,6 @@ def get_closest_city(latitude,longitude):
         logging.error(msg_error)
         return '---'
 
-#test get_closest_city
-#print(get_closest_city(-10.47,-75.26))
-
-
-'''
-#Code to call the function
-url=short_url("http://eventos.igepn.edu.ec/eqevents/event/igepn2018jgsc/overview.html")
-print(url)
-'''
-
 def get_survey_url(local_time,event_id):
     
     date_event = local_time.strftime("%Y-%m-%d")
@@ -45,17 +35,5 @@ def get_survey_url(local_time,event_id):
         return short_url(cfg.arcgis_survey_url %(event_id,date_event,time_event))
     else:
         return short_url(cfg.google_survey_url %(event_id, date_event, time_event))
-
-'''
-#Code to call the function
-from datetime import datetime
-
-dt='2018-05-08T01:49:53.767704Z' 
-dt=datetime.strptime(dt[:19], "%Y-%m-%dT%H:%M:%S")
-url=get_survey_url(dt,'igepn2018jgsf')
-print(url)
-'''
-
-
 
 
