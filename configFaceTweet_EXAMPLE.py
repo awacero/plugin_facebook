@@ -12,6 +12,9 @@ tw_dbname      =   "%s/twitter/post.db" %(plugins_path)
 tw_dbtable     =   "postsTwitter"
 tw_token_file  =   "/%s/twitter/twitter_account.json" %plugins_path
 tw_log_file    =   "%s/twitter/twitter.log" %(plugins_path)
+
+bitly_key = 'XXXXXXX_BITLY_TOKEN_XXXXXXX'
+bitly_user = 'BITLY_USER'
  
 local_zone  = 'America/Guayaquil'
 LIMIT_HOURS = 2000

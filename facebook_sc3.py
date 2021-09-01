@@ -9,6 +9,7 @@ import seiscomp3.Logging as logging
 import eqelib.plugin as plugin
 import eqelib.settings as settings
 from eqelib import configFaceTweet as cfg
+from eqelib import utilities 
 from eqelib import distancia
 
 import facebook_plugin_sqlite_connection as sqliteFaceDB
@@ -30,7 +31,8 @@ class Plugin(plugin.PluginBase):
         self.fb_acc = cfg.face_fan_page
         self.hour_limit = cfg.LIMIT_HOURS
         self.log_file = cfg.fb_log_file
-    
+        self.geo_url = cfg.geolocation_service_url
+        self.geo_token = cfg.geolocation_service_token
         
     def processEvent(self,ctx,path):
         """
@@ -152,10 +154,19 @@ class Plugin(plugin.PluginBase):
             
 
     def create_post_message(self,evD):
-	
-        post_text =  "#SISMO ID: %s %s %s TL Magnitud:%s Prof %s km, %s Latitud:%s Longitud:%s Sintió este sismo? Cuéntenos en dónde (débil,fuerte,muy fuerte) Repórtelo! en %s\
-        " % (evD['evID'], evD['modo'], evD['date'], evD['magV'], evD['dept'], evD['dist'], evD['lati'], evD['long'], evD['url'])
-        logging.info(post_text)
+        
+        query = '%s/get_country?lat=%s&lon=%s&token=%s'%(self.geo_url,evD['lati'],evD['long'],self.geo_token)
+	print(query)
+        result = requests.get(query)
+        country = result.text
+        post_text =  """#SISMO ID: %s %s %s TL Magnitud:%s Prof %s km, %s Latitud:%s Longitud:%s Sintió este sismo? Cuéntenos en dónde (débil,\
+fuerte,muy fuerte) Repórtelo! en %s""" % (evD['evID'], evD['modo'], evD['date'], evD['magV'], evD['dept'], evD['dist'], evD['lati'], evD['long'], evD['url'])
+
+        if country == 'Colombia':
+            post_text += "\nFuente oficial COLOMBIA: \nhttps://www.sgc.gov.co/sismos \nhttps://twitter.com/sgcol"
+        elif country == 'Peru':
+            post_text += "\nFuente oficial PERU: \nhttps://www.gob.pe/igp \nhttps://twitter.com/Sismos_Peru_IGP"
+        
         return post_text, evD['path']
 
     
@@ -194,18 +205,17 @@ class Plugin(plugin.PluginBase):
         """
         d={}
         o=ctx['origin']
-        d['evID']=ctx['ID']
-        d['modo']=self.status(str(o.evaluationMode))
-        dtime=o.time.value
-        dtime=datetime.strptime(dtime[:19],"%Y-%m-%dT%H:%M:%S") -timedelta(hours=5)
-        d['date']=dtime
-        d['magV']="%.2f" %o.magnitude.magnitude.value
-        d['dept']="%.2f" %o.depth.value
-        d['dist']=distancia.closest_distance(o.latitude.value,o.longitude.value)
+        d['evID'] = ctx['ID']
+        d['modo'] = self.status(str(o.evaluationMode))
+        dtime = o.time.value
+        dtime = datetime.strptime(dtime[:19],"%Y-%m-%dT%H:%M:%S") -timedelta(hours=5)
+        d['date'] = dtime
+        d['magV'] = "%.2f" %o.magnitude.magnitude.value
+        d['dept'] = "%.2f" %o.depth.value
+        d['dist'] = utilities.get_closest_city(o.latitude.value,o.longitude.value)
         d['lati']="%.2f" %o.latitude.value
         d['long']="%.2f" %o.longitude.value
-        d['url']=distancia.create_google_url(d['date'],d['evID'])
-        d['url']=str(distancia.short_url(d['url']))       
+        d['url']= str(utilities.get_survey_url(d['date'],d['evID']))       
         d['path']="%s/%s-map.png" %(path,d['evID'])
         return d
 
